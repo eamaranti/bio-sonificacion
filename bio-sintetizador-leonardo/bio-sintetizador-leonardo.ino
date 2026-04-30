@@ -1,7 +1,8 @@
 #include "MIDIUSB.h"
 
 int lastSensorValue = 0;
-int threshold = 3; // Umbral muy bajo para detectar cambios microscópicos
+int threshold = 25; // Aumentado para exigir que se toquen ambos sensores (cierra el circuito)
+int minActivationValue = 30; // Evita el ruido de "antena" al tocar solo un cable
 const int ledPin = 8;
 
 // Variables para el filtro de suavizado (Exponential Moving Average)
@@ -24,15 +25,15 @@ void loop() {
   smoothedValue = (alpha * rawValue) + ((1.0 - alpha) * smoothedValue);
   int currentSensorValue = (int)smoothedValue;
   
-  // Evaluamos si la fluctuación real superó nuestro pequeño umbral
-  if (abs(currentSensorValue - lastSensorValue) >= threshold) {
+  // Evaluamos si superó el umbral Y si el valor mínimo asegura que el circuito está cerrado
+  if (abs(currentSensorValue - lastSensorValue) >= threshold && currentSensorValue > minActivationValue) {
     
-    // Gama cromática rica: Mapeo al rango completo de un piano (notas 21 a 108)
-    int note = map(currentSensorValue, 0, 1023, 21, 108); 
+    // Octavas medias/altas: Mapeo de notas (ej. 48 a 90 equivale a C3 hasta F#6)
+    int note = map(currentSensorValue, 0, 1023, 48, 90); 
     
     // Riqueza dinámica: Calculamos qué tan brusco fue el cambio para el volumen
     int changeMagnitude = abs(currentSensorValue - lastSensorValue);
-    int velocity = map(changeMagnitude, threshold, 30, 50, 127);
+    int velocity = map(changeMagnitude, threshold, 80, 50, 127); // Ajustado al nuevo umbral
     velocity = constrain(velocity, 50, 127); // Mantenemos el volumen en un rango audible
 
     digitalWrite(ledPin, HIGH); // Feedback visual
